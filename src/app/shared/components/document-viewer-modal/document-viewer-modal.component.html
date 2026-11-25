@@ -1,0 +1,89 @@
+<app-modal
+  [open]="person() !== null"
+  [title]="person() ? person()!.firstName + ' ' + person()!.lastName : ''"
+  [subtitle]="person() ? roleLabel() + ' • Doc. ' + person()!.documentNumber : null"
+  size="lg"
+  (closed)="closed.emit()"
+>
+  @if (person(); as p) {
+    <div class="space-y-5">
+      <div class="grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-400">N.° Documento</p>
+          <p class="mt-0.5 font-semibold text-slate-900 tabular-nums">{{ p.documentNumber }}</p>
+        </div>
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-400">Edad</p>
+          <p class="mt-0.5 font-semibold text-slate-900 tabular-nums">{{ p.age }} años</p>
+        </div>
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-400">Fecha de nacimiento</p>
+          <p class="mt-0.5 font-semibold text-slate-900 tabular-nums">{{ p.dateOfBirth }}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 p-3">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Fotografía</p>
+          @if (p.photoUrl) {
+            <a [href]="p.photoUrl" target="_blank" rel="noopener noreferrer" class="block">
+              <img
+                [src]="p.photoUrl"
+                [alt]="'Foto de ' + p.firstName"
+                class="h-44 w-full rounded-lg object-cover bg-slate-100"
+              />
+            </a>
+          } @else {
+            <div class="flex h-44 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">
+              Sin fotografía
+            </div>
+          }
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-3">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Documento (Anverso)
+          </p>
+          @if (p.documentFrontUrl) {
+            <a [href]="p.documentFrontUrl" target="_blank" rel="noopener noreferrer" class="block">
+              <img
+                [src]="p.documentFrontUrl"
+                alt="Documento anverso"
+                class="h-44 w-full rounded-lg object-cover bg-slate-100"
+              />
+            </a>
+          } @else {
+            <div class="flex h-44 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">
+              No cargado
+            </div>
+          }
+        </div>
+
+        <div class="rounded-xl border border-slate-200 p-3">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Documento (Reverso)
+          </p>
+          @if (p.documentBackUrl) {
+            <a [href]="p.documentBackUrl" target="_blank" rel="noopener noreferrer" class="block">
+              <img
+                [src]="p.documentBackUrl"
+                alt="Documento reverso"
+                class="h-44 w-full rounded-lg object-cover bg-slate-100"
+              />
+            </a>
+          } @else {
+            <div class="flex h-44 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">
+              No cargado
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="button" class="rs-btn rs-btn-secondary" (click)="closed.emit()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  }
+</app-modal>

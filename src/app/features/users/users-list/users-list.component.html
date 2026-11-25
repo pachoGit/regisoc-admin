@@ -1,0 +1,173 @@
+<app-page-header
+  title="Usuarios y Gestores"
+  subtitle="Crea administradores y gestores asignados a cada club deportivo"
+>
+  <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+    + Nuevo Usuario
+  </button>
+</app-page-header>
+
+<!-- Filters -->
+<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-wrap items-center gap-1.5">
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="roleFilter() === 'ALL' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="roleFilter.set('ALL')"
+    >
+      Todos ({{ users().length }})
+    </button>
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="roleFilter() === 'CLUB_MANAGER' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="roleFilter.set('CLUB_MANAGER')"
+    >
+      Gestores de Club
+    </button>
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="roleFilter() === 'ADMIN' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="roleFilter.set('ADMIN')"
+    >
+      Administradores
+    </button>
+  </div>
+
+  <div class="w-full sm:max-w-xs">
+    <input
+      type="text"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      placeholder="Filtrar por nombre, usuario o DNI..."
+      class="rs-input"
+    />
+  </div>
+</div>
+
+@if (loading()) {
+  <app-loading-spinner label="Cargando usuarios..." />
+} @else if (filteredUsers().length === 0) {
+  <app-empty-state
+    title="No hay usuarios que coincidan"
+    description="Crea un gestor de club para que pueda administrar su plantilla desde la app móvil."
+  >
+    <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+      Crear usuario
+    </button>
+  </app-empty-state>
+} @else {
+  <div class="rs-table-wrapper">
+    <table class="rs-table">
+      <thead>
+        <tr>
+          <th>Nombre completo</th>
+          <th>Usuario</th>
+          <th>Documento</th>
+          <th>Rol</th>
+          <th>Club asignado</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of filteredUsers(); track user.id) {
+          <tr>
+            <td class="font-semibold text-slate-900">{{ user.name }} {{ user.surname }}</td>
+            <td class="text-slate-600">&#64;{{ user.username }}</td>
+            <td class="tabular-nums">{{ user.documentNumber }}</td>
+            <td>
+              <app-status-badge [status]="user.role" />
+            </td>
+            <td>{{ getClubName(user.clubId) }}</td>
+            <td>
+              <app-status-badge [status]="user.isActive ? 'ACTIVE' : 'INACTIVE'" />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<!-- Create User Modal -->
+<app-modal
+  [open]="modalOpen()"
+  title="Nuevo Usuario"
+  subtitle="Asigna un rol y, si corresponde, el club que gestionará."
+  (closed)="closeModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="createUser()" class="space-y-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label for="u-name" class="rs-label">Nombres *</label>
+        <input id="u-name" type="text" formControlName="name" class="rs-input" />
+      </div>
+      <div>
+        <label for="u-surname" class="rs-label">Apellidos *</label>
+        <input id="u-surname" type="text" formControlName="surname" class="rs-input" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label for="u-doc" class="rs-label">N.° Documento *</label>
+        <input id="u-doc" type="text" formControlName="documentNumber" class="rs-input" />
+      </div>
+      <div>
+        <label for="u-username" class="rs-label">Usuario *</label>
+        <input id="u-username" type="text" formControlName="username" class="rs-input" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label for="u-password" class="rs-label">Contraseña *</label>
+        <input
+          id="u-password"
+          type="password"
+          formControlName="password"
+          placeholder="Mínimo 6 caracteres"
+          class="rs-input"
+        />
+      </div>
+      <div>
+        <label for="u-role" class="rs-label">Rol *</label>
+        <select id="u-role" formControlName="role" class="rs-input">
+          <option value="CLUB_MANAGER">Gestor de Club (CLUB_MANAGER)</option>
+          <option value="ADMIN">Administrador (ADMIN)</option>
+        </select>
+      </div>
+    </div>
+
+    @if (form.controls.role.value === 'CLUB_MANAGER') {
+      <div>
+        <label for="u-club" class="rs-label">Club asignado *</label>
+        <select
+          id="u-club"
+          formControlName="clubId"
+          class="rs-input"
+          [class.rs-input-error]="form.controls.clubId.invalid && form.controls.clubId.touched"
+        >
+          <option [ngValue]="null">Selecciona un club...</option>
+          @for (club of clubs(); track club.id) {
+            <option [ngValue]="club.id">{{ club.name }}</option>
+          }
+        </select>
+        @if (form.controls.clubId.invalid && form.controls.clubId.touched) {
+          <p class="rs-field-error">Debes seleccionar el club que gestionará este usuario.</p>
+        }
+      </div>
+    }
+
+    <div class="flex justify-end gap-2.5 pt-2">
+      <button type="button" class="rs-btn rs-btn-secondary" (click)="closeModal()">
+        Cancelar
+      </button>
+      <button type="submit" class="rs-btn rs-btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Creando...' : 'Crear usuario' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

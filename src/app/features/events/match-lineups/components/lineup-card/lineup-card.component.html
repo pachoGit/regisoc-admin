@@ -1,0 +1,123 @@
+<section class="rs-card overflow-hidden">
+  <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-5 py-4">
+    <div>
+      <span
+        class="text-[11px] font-semibold uppercase tracking-wider"
+        [class.text-emerald-600]="sideTone() === 'emerald'"
+        [class.text-sky-600]="sideTone() === 'sky'"
+      >
+        {{ sideLabel() }}
+      </span>
+      <h2 class="text-base font-bold text-slate-900">{{ clubName() }}</h2>
+    </div>
+
+    @if (lineup(); as current) {
+      <div class="flex items-center gap-2">
+        <app-status-badge [status]="current.status" />
+        @if (current.status === 'OPEN') {
+          <button
+            type="button"
+            class="no-print rs-btn rs-btn-warning rs-btn-sm"
+            [disabled]="closing()"
+            (click)="closeRequested.emit(current)"
+          >
+            {{ closing() ? 'Cerrando...' : 'Cerrar Planilla' }}
+          </button>
+        }
+      </div>
+    } @else {
+      <app-status-badge status="INACTIVE" customLabel="Sin enviar" />
+    }
+  </div>
+
+  <div class="p-5">
+    @if (lineup(); as current) {
+      <div class="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 p-3">
+          <p class="text-[11px] font-semibold uppercase text-slate-400">Entrenador</p>
+          @if (current.coach; as coach) {
+            <div class="mt-1 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-slate-900">
+                  {{ coach.firstName }} {{ coach.lastName }}
+                </p>
+                <p class="text-xs text-slate-500 tabular-nums">Doc. {{ coach.documentNumber }}</p>
+              </div>
+              <button
+                type="button"
+                class="no-print rs-btn rs-btn-ghost rs-btn-sm"
+                (click)="inspectPerson.emit({ person: coach, roleLabel: 'Entrenador' })"
+              >
+                Docs
+              </button>
+            </div>
+          } @else {
+            <p class="mt-1 text-xs text-slate-400">No asignado</p>
+          }
+        </div>
+
+        <div class="rounded-lg border border-slate-200 p-3">
+          <p class="text-[11px] font-semibold uppercase text-slate-400">Preparador Físico</p>
+          @if (current.physicalTrainer; as trainer) {
+            <div class="mt-1 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-slate-900">
+                  {{ trainer.firstName }} {{ trainer.lastName }}
+                </p>
+                <p class="text-xs text-slate-500 tabular-nums">Doc. {{ trainer.documentNumber }}</p>
+              </div>
+              <button
+                type="button"
+                class="no-print rs-btn rs-btn-ghost rs-btn-sm"
+                (click)="inspectPerson.emit({ person: trainer, roleLabel: 'Preparador Físico' })"
+              >
+                Docs
+              </button>
+            </div>
+          } @else {
+            <p class="mt-1 text-xs text-slate-400">No asignado</p>
+          }
+        </div>
+      </div>
+
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Jugadores convocados ({{ current.players.length }}/22)
+      </p>
+      @if (current.players.length === 0) {
+        <p class="py-4 text-center text-sm text-slate-400">Sin jugadores en la planilla.</p>
+      } @else {
+        <div class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+          @for (p of current.players; track p.playerId) {
+            <div class="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-slate-900">
+                  {{ p.firstName }} {{ p.lastName }}
+                </p>
+                <p class="text-xs text-slate-500 tabular-nums">
+                  Doc. {{ p.documentNumber }} • {{ p.age }} años
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <app-status-badge [status]="p.position" />
+                <button
+                  type="button"
+                  class="no-print rs-btn rs-btn-ghost rs-btn-sm"
+                  (click)="inspectPerson.emit({ person: p, roleLabel: 'Jugador' })"
+                >
+                  Docs
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    } @else {
+      <div class="py-10 text-center">
+        <p class="text-sm font-medium text-slate-600">Planilla pendiente</p>
+        <p class="mt-1 text-xs text-slate-400">
+          El gestor de {{ clubName() }} aún no ha registrado su plantilla para este partido.
+        </p>
+      </div>
+    }
+  </div>
+</section>

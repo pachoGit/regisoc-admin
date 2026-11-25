@@ -1,0 +1,341 @@
+@if (facade.loading()) {
+  <app-loading-spinner label="Cargando información del evento..." />
+} @else if (facade.event(); as ev) {
+  <app-page-header
+    [title]="ev.name"
+    [subtitle]="(ev.location ? ev.location + ' • ' : '') + ev.startDate + ' al ' + ev.endDate"
+    backLink="/events"
+    backLabel="Volver a eventos"
+  >
+    <app-status-badge [status]="ev.status" />
+    @if (ev.status === 'UPCOMING') {
+      <button
+        type="button"
+        class="rs-btn rs-btn-primary"
+        [disabled]="facade.busy()"
+        (click)="onStartEvent()"
+      >
+        Iniciar Evento
+      </button>
+    }
+    @if (ev.status === 'ONGOING') {
+      <button
+        type="button"
+        class="rs-btn rs-btn-warning"
+        [disabled]="facade.busy()"
+        (click)="onFinishEvent()"
+      >
+        Finalizar Evento
+      </button>
+    }
+  </app-page-header>
+
+  @if (ev.description) {
+    <div class="rs-card mb-6 p-4 text-sm text-slate-600">
+      {{ ev.description }}
+    </div>
+  }
+
+  <!-- Tabs -->
+  <div class="rs-tabs mb-6">
+    <button
+      type="button"
+      class="rs-tab"
+      [class.rs-tab-active]="activeTab() === 'matchDates'"
+      (click)="activeTab.set('matchDates')"
+    >
+      Fechas y Partidos ({{ facade.matchDates().length }})
+    </button>
+    <button
+      type="button"
+      class="rs-tab"
+      [class.rs-tab-active]="activeTab() === 'clubs'"
+      (click)="activeTab.set('clubs')"
+    >
+      Clubes Inscritos ({{ facade.registeredClubs().length }})
+    </button>
+  </div>
+
+  <!-- TAB 1: Match Dates & Matches -->
+  @if (activeTab() === 'matchDates') {
+    <div class="mb-4 flex items-center justify-between">
+      <p class="text-sm text-slate-500">
+        Crea las fechas deportivas (jornadas) y asigna los clubes rivales de cada encuentro.
+      </p>
+      <button type="button" class="rs-btn rs-btn-primary rs-btn-sm" (click)="openMatchDateModal()">
+        + Nueva Fecha
+      </button>
+    </div>
+
+    @if (facade.matchDates().length === 0) {
+      <app-empty-state
+        title="Sin fechas deportivas programadas"
+        description="Agrega la primera jornada del evento para programar los partidos."
+      >
+        <button type="button" class="rs-btn rs-btn-primary" (click)="openMatchDateModal()">
+          Crear primera fecha
+        </button>
+      </app-empty-state>
+    } @else {
+      <div class="space-y-4">
+        @for (md of facade.matchDates(); track md.id) {
+          <div class="rs-card overflow-hidden">
+            <div class="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div class="flex items-center gap-3">
+                <h3 class="text-base font-semibold text-slate-900">{{ md.name }}</h3>
+                <span class="text-xs font-medium text-slate-500 tabular-nums">{{ md.date }}</span>
+                <app-status-badge [status]="md.status" />
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                @if (md.status === 'UPCOMING') {
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-secondary rs-btn-sm text-emerald-700"
+                    [disabled]="facade.busy()"
+                    (click)="onStartMatchDate(md)"
+                  >
+                    Iniciar Fecha
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="rs-btn rs-btn-primary rs-btn-sm"
+                  (click)="openMatchModal(md)"
+                >
+                  + Agregar Partido
+                </button>
+              </div>
+            </div>
+
+            <div class="p-5">
+              @if ((facade.matchesByDate()[md.id] ?? []).length === 0) {
+                <p class="text-center text-sm text-slate-400 py-4">
+                  Aún no hay partidos asignados en esta fecha.
+                </p>
+              } @else {
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  @for (match of facade.matchesByDate()[md.id] ?? []; track match.id) {
+                    <div class="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-emerald-300">
+                      <div class="flex items-center justify-between text-xs text-slate-500">
+                        <span class="tabular-nums">
+                          {{ match.scheduledTime | date: 'dd/MM/yyyy HH:mm' }}
+                        </span>
+                        <app-status-badge [status]="match.status" />
+                      </div>
+
+                      <div class="flex items-center justify-between gap-2 py-1">
+                        <span class="flex-1 truncate text-sm font-semibold text-slate-900">
+                          {{ facade.getClubName(match.homeClubId) }}
+                        </span>
+                        <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase text-slate-500">
+                          VS
+                        </span>
+                        <span class="flex-1 truncate text-right text-sm font-semibold text-slate-900">
+                          {{ facade.getClubName(match.awayClubId) }}
+                        </span>
+                      </div>
+
+                      <div class="flex justify-end border-t border-slate-100 pt-2.5">
+                        <a
+                          [routerLink]="['/events', ev.id, 'matches', match.id, 'lineups']"
+                          class="rs-btn rs-btn-secondary rs-btn-sm"
+                        >
+                          Ver Plantillas →
+                        </a>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- TAB 2: Registered Clubs -->
+  @if (activeTab() === 'clubs') {
+    <div class="mb-4 flex items-center justify-between">
+      <p class="text-sm text-slate-500">
+        Solo los clubes inscritos en este evento pueden ser asignados a los partidos.
+      </p>
+      <button
+        type="button"
+        class="rs-btn rs-btn-primary rs-btn-sm"
+        [disabled]="facade.availableClubsToRegister().length === 0"
+        (click)="openRegisterClubModal()"
+      >
+        + Inscribir Club
+      </button>
+    </div>
+
+    @if (facade.registeredClubs().length === 0) {
+      <app-empty-state
+        title="Sin clubes inscritos"
+        description="Inscribe los clubes participantes para habilitar la creación de partidos."
+      >
+        <button
+          type="button"
+          class="rs-btn rs-btn-primary"
+          [disabled]="facade.availableClubsToRegister().length === 0"
+          (click)="openRegisterClubModal()"
+        >
+          Inscribir primer club
+        </button>
+      </app-empty-state>
+    } @else {
+      <div class="rs-table-wrapper">
+        <table class="rs-table">
+          <thead>
+            <tr>
+              <th>Club</th>
+              <th>Fecha de inscripción</th>
+              <th class="text-right">Plantilla</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of facade.registeredClubs(); track item.registration.id) {
+              <tr>
+                <td class="font-semibold text-slate-900">{{ item.club.name }}</td>
+                <td class="tabular-nums text-xs text-slate-500">
+                  {{ item.registration.registeredAt | date: 'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td class="text-right">
+                  <a
+                    [routerLink]="['/clubs', item.club.id]"
+                    class="rs-btn rs-btn-secondary rs-btn-sm"
+                  >
+                    Ver documentos
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Modal: Register Club -->
+  <app-modal
+    [open]="registerClubModalOpen()"
+    title="Inscribir Club al Evento"
+    subtitle="Selecciona un club registrado para participar en este torneo."
+    size="sm"
+    (closed)="registerClubModalOpen.set(false)"
+  >
+    <form [formGroup]="registerClubForm" (ngSubmit)="submitRegisterClub()" class="space-y-4">
+      <div>
+        <label for="reg-club" class="rs-label">Club *</label>
+        <select id="reg-club" formControlName="clubId" class="rs-input">
+          <option [ngValue]="null">Selecciona un club...</option>
+          @for (club of facade.availableClubsToRegister(); track club.id) {
+            <option [ngValue]="club.id">{{ club.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button
+          type="button"
+          class="rs-btn rs-btn-secondary"
+          (click)="registerClubModalOpen.set(false)"
+        >
+          Cancelar
+        </button>
+        <button type="submit" class="rs-btn rs-btn-primary" [disabled]="facade.busy()">
+          {{ facade.busy() ? 'Inscribiendo...' : 'Inscribir club' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal: Create Match Date -->
+  <app-modal
+    [open]="matchDateModalOpen()"
+    title="Nueva Fecha Deportiva"
+    subtitle="Crea una jornada dentro del calendario del evento."
+    size="sm"
+    (closed)="matchDateModalOpen.set(false)"
+  >
+    <form [formGroup]="matchDateForm" (ngSubmit)="submitMatchDate()" class="space-y-4">
+      <div>
+        <label for="md-name" class="rs-label">Nombre de la jornada *</label>
+        <input
+          id="md-name"
+          type="text"
+          formControlName="name"
+          placeholder="Ej. Fecha 1"
+          class="rs-input"
+        />
+      </div>
+
+      <div>
+        <label for="md-date" class="rs-label">Fecha *</label>
+        <input id="md-date" type="date" formControlName="date" class="rs-input" />
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button
+          type="button"
+          class="rs-btn rs-btn-secondary"
+          (click)="matchDateModalOpen.set(false)"
+        >
+          Cancelar
+        </button>
+        <button type="submit" class="rs-btn rs-btn-primary" [disabled]="facade.busy()">
+          {{ facade.busy() ? 'Creando...' : 'Crear fecha' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Modal: Create Match (Rivales) -->
+  <app-modal
+    [open]="matchModalOpen()"
+    title="Agregar Partido"
+    [subtitle]="targetMatchDate() ? 'Jornada: ' + targetMatchDate()!.name + ' (' + targetMatchDate()!.date + ')' : null"
+    size="md"
+    (closed)="matchModalOpen.set(false)"
+  >
+    <form [formGroup]="matchForm" (ngSubmit)="submitMatch()" class="space-y-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="m-home" class="rs-label">Club Local *</label>
+          <select id="m-home" formControlName="homeClubId" class="rs-input">
+            <option [ngValue]="null">Selecciona local...</option>
+            @for (item of facade.registeredClubs(); track item.club.id) {
+              <option [ngValue]="item.club.id">{{ item.club.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="m-away" class="rs-label">Club Visitante *</label>
+          <select id="m-away" formControlName="awayClubId" class="rs-input">
+            <option [ngValue]="null">Selecciona visitante...</option>
+            @for (item of facade.registeredClubs(); track item.club.id) {
+              <option [ngValue]="item.club.id">{{ item.club.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="m-time" class="rs-label">Fecha y hora programada *</label>
+        <input id="m-time" type="datetime-local" formControlName="scheduledTime" class="rs-input" />
+      </div>
+
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button type="button" class="rs-btn rs-btn-secondary" (click)="matchModalOpen.set(false)">
+          Cancelar
+        </button>
+        <button type="submit" class="rs-btn rs-btn-primary" [disabled]="facade.busy()">
+          {{ facade.busy() ? 'Programando...' : 'Agregar partido' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}

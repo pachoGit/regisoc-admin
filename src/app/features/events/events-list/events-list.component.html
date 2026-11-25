@@ -1,0 +1,198 @@
+<app-page-header
+  title="Eventos Deportivos"
+  subtitle="Crea torneos, controla su ciclo de vida, inscribe clubes y programa sus jornadas"
+>
+  <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+    + Nuevo Evento
+  </button>
+</app-page-header>
+
+<!-- Filter bar -->
+<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-wrap items-center gap-1.5">
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="statusFilter() === 'ALL' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="statusFilter.set('ALL')"
+    >
+      Todos ({{ events().length }})
+    </button>
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="statusFilter() === 'UPCOMING' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="statusFilter.set('UPCOMING')"
+    >
+      Programados
+    </button>
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="statusFilter() === 'ONGOING' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="statusFilter.set('ONGOING')"
+    >
+      En curso
+    </button>
+    <button
+      type="button"
+      class="rs-btn rs-btn-sm"
+      [class]="statusFilter() === 'FINISHED' ? 'rs-btn-primary' : 'rs-btn-secondary'"
+      (click)="statusFilter.set('FINISHED')"
+    >
+      Finalizados
+    </button>
+  </div>
+
+  <div class="w-full sm:max-w-xs">
+    <input
+      type="text"
+      [ngModel]="search()"
+      (ngModelChange)="search.set($event)"
+      placeholder="Buscar por nombre o sede..."
+      class="rs-input"
+    />
+  </div>
+</div>
+
+@if (loading()) {
+  <app-loading-spinner label="Cargando eventos..." />
+} @else if (filteredEvents().length === 0) {
+  <app-empty-state
+    title="No hay eventos para mostrar"
+    description="Crea un evento deportivo para comenzar a inscribir clubes y programar fechas."
+  >
+    <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+      Crear evento
+    </button>
+  </app-empty-state>
+} @else {
+  <div class="rs-table-wrapper">
+    <table class="rs-table">
+      <thead>
+        <tr>
+          <th>Evento</th>
+          <th>Sede / Ubicación</th>
+          <th>Periodo</th>
+          <th>Estado</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (event of filteredEvents(); track event.id) {
+          <tr>
+            <td>
+              <a
+                [routerLink]="['/events', event.id]"
+                class="font-semibold text-slate-900 hover:text-emerald-600"
+              >
+                {{ event.name }}
+              </a>
+              @if (event.description) {
+                <p class="max-w-xs truncate text-xs text-slate-500">{{ event.description }}</p>
+              }
+            </td>
+            <td>{{ event.location || '—' }}</td>
+            <td class="tabular-nums text-xs text-slate-600">
+              {{ event.startDate }} → {{ event.endDate }}
+            </td>
+            <td>
+              <app-status-badge [status]="event.status" />
+            </td>
+            <td>
+              <div class="flex items-center justify-end gap-1.5">
+                @if (event.status === 'UPCOMING') {
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-ghost rs-btn-sm text-emerald-700 hover:bg-emerald-50"
+                    (click)="startEvent(event)"
+                  >
+                    Iniciar
+                  </button>
+                }
+                @if (event.status === 'ONGOING') {
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-ghost rs-btn-sm text-amber-700 hover:bg-amber-50"
+                    (click)="finishEvent(event)"
+                  >
+                    Finalizar
+                  </button>
+                }
+                <a
+                  [routerLink]="['/events', event.id]"
+                  class="rs-btn rs-btn-secondary rs-btn-sm"
+                >
+                  Gestionar
+                </a>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<!-- Create Event Modal -->
+<app-modal
+  [open]="modalOpen()"
+  title="Nuevo Evento Deportivo"
+  subtitle="La fecha de finalización debe ser una fecha futura."
+  (closed)="closeModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="createEvent()" class="space-y-4">
+    <div>
+      <label for="ev-name" class="rs-label">Nombre del evento *</label>
+      <input
+        id="ev-name"
+        type="text"
+        formControlName="name"
+        placeholder="Ej. Torneo Apertura 2026"
+        class="rs-input"
+      />
+    </div>
+
+    <div>
+      <label for="ev-location" class="rs-label">Ubicación / Sede</label>
+      <input
+        id="ev-location"
+        type="text"
+        formControlName="location"
+        placeholder="Ej. Complejo Deportivo Municipal"
+        class="rs-input"
+      />
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label for="ev-start" class="rs-label">Fecha de inicio *</label>
+        <input id="ev-start" type="date" formControlName="startDate" class="rs-input" />
+      </div>
+      <div>
+        <label for="ev-end" class="rs-label">Fecha de fin *</label>
+        <input id="ev-end" type="date" formControlName="endDate" class="rs-input" />
+      </div>
+    </div>
+
+    <div>
+      <label for="ev-desc" class="rs-label">Descripción</label>
+      <textarea
+        id="ev-desc"
+        rows="3"
+        formControlName="description"
+        placeholder="Detalles del reglamento o categoría..."
+        class="rs-input"
+      ></textarea>
+    </div>
+
+    <div class="flex justify-end gap-2.5 pt-2">
+      <button type="button" class="rs-btn rs-btn-secondary" (click)="closeModal()">
+        Cancelar
+      </button>
+      <button type="submit" class="rs-btn rs-btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Creando...' : 'Crear evento' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

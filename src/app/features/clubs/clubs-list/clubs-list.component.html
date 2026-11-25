@@ -1,0 +1,187 @@
+<app-page-header
+  title="Clubes Deportivos"
+  subtitle="Administra los clubes registrados e inspecciona la documentación de sus plantillas"
+>
+  <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+    + Nuevo Club
+  </button>
+</app-page-header>
+
+<!-- Search Bar -->
+<form (ngSubmit)="loadClubs()" class="mb-5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+  <div class="relative flex-1 max-w-md">
+    <input
+      type="text"
+      name="search"
+      [ngModel]="searchTerm()"
+      (ngModelChange)="onSearchChange($event)"
+      placeholder="Buscar club por nombre..."
+      class="rs-input pr-10"
+    />
+  </div>
+  <div class="flex gap-2">
+    <button type="submit" class="rs-btn rs-btn-secondary">Buscar</button>
+    @if (searchTerm()) {
+      <button
+        type="button"
+        class="rs-btn rs-btn-ghost"
+        (click)="onSearchChange(''); loadClubs()"
+      >
+        Limpiar
+      </button>
+    }
+  </div>
+</form>
+
+@if (loading()) {
+  <app-loading-spinner label="Cargando clubes..." />
+} @else if (clubs().length === 0) {
+  <app-empty-state
+    title="No se encontraron clubes"
+    description="Crea un club deportivo para asignarle gestores e inscribirlo en eventos."
+  >
+    <button type="button" class="rs-btn rs-btn-primary" (click)="openCreateModal()">
+      Crear primer club
+    </button>
+  </app-empty-state>
+} @else {
+  <div class="rs-table-wrapper">
+    <table class="rs-table">
+      <thead>
+        <tr>
+          <th>Club</th>
+          <th>Fundación</th>
+          <th>Estado</th>
+          <th>Creado por</th>
+          <th class="text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (club of clubs(); track club.id) {
+          <tr>
+            <td>
+              <div class="flex items-center gap-3">
+                @if (club.crestUrl) {
+                  <img
+                    [src]="club.crestUrl"
+                    [alt]="club.name"
+                    class="h-10 w-10 rounded-lg border border-slate-200 object-cover bg-slate-50"
+                  />
+                } @else {
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-xs font-bold uppercase text-emerald-700">
+                    {{ club.name.slice(0, 2) }}
+                  </div>
+                }
+                <div class="min-w-0">
+                  <a
+                    [routerLink]="['/clubs', club.id]"
+                    class="font-semibold text-slate-900 hover:text-emerald-600"
+                  >
+                    {{ club.name }}
+                  </a>
+                  @if (club.description) {
+                    <p class="max-w-xs truncate text-xs text-slate-500">{{ club.description }}</p>
+                  }
+                </div>
+              </div>
+            </td>
+            <td class="tabular-nums">{{ club.foundedYear ?? '—' }}</td>
+            <td>
+              <app-status-badge [status]="club.isActive ? 'ACTIVE' : 'INACTIVE'" />
+            </td>
+            <td class="text-xs text-slate-500">{{ club.createdBy }}</td>
+            <td>
+              <div class="flex items-center justify-end gap-1.5">
+                <a [routerLink]="['/clubs', club.id]" class="rs-btn rs-btn-secondary rs-btn-sm">
+                  Plantilla
+                </a>
+                <button
+                  type="button"
+                  class="rs-btn rs-btn-ghost rs-btn-sm"
+                  (click)="openEditModal(club)"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  class="rs-btn rs-btn-ghost rs-btn-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  (click)="deleteClub(club)"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<!-- Create / Edit Modal -->
+<app-modal
+  [open]="modalOpen()"
+  [title]="editingClub() ? 'Editar Club' : 'Nuevo Club Deportivo'"
+  [subtitle]="editingClub() ? 'Modifica la información general del club.' : 'Registra un nuevo club en el sistema.'"
+  (closed)="closeModal()"
+>
+  <form [formGroup]="form" (ngSubmit)="saveClub()" class="space-y-4">
+    <div>
+      <label for="club-name" class="rs-label">Nombre del club *</label>
+      <input
+        id="club-name"
+        type="text"
+        formControlName="name"
+        placeholder="Ej. Atlético Nacional"
+        class="rs-input"
+        [class.rs-input-error]="form.controls.name.invalid && form.controls.name.touched"
+      />
+      @if (form.controls.name.invalid && form.controls.name.touched) {
+        <p class="rs-field-error">El nombre del club es obligatorio.</p>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label for="club-year" class="rs-label">Año de fundación</label>
+        <input
+          id="club-year"
+          type="number"
+          formControlName="foundedYear"
+          placeholder="1995"
+          class="rs-input"
+        />
+      </div>
+      <div>
+        <label for="club-crest" class="rs-label">URL del escudo</label>
+        <input
+          id="club-crest"
+          type="url"
+          formControlName="crestUrl"
+          placeholder="https://..."
+          class="rs-input"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="club-description" class="rs-label">Descripción</label>
+      <textarea
+        id="club-description"
+        rows="3"
+        formControlName="description"
+        placeholder="Información adicional del club..."
+        class="rs-input"
+      ></textarea>
+    </div>
+
+    <div class="flex justify-end gap-2.5 pt-2">
+      <button type="button" class="rs-btn rs-btn-secondary" (click)="closeModal()">
+        Cancelar
+      </button>
+      <button type="submit" class="rs-btn rs-btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : editingClub() ? 'Guardar cambios' : 'Crear club' }}
+      </button>
+    </div>
+  </form>
+</app-modal>

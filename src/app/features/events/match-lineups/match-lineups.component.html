@@ -1,0 +1,43 @@
+@if (loading()) {
+  <app-loading-spinner label="Cargando plantillas del partido..." />
+} @else if (match(); as m) {
+  <app-page-header
+    [title]="homeClubName() + ' vs ' + awayClubName()"
+    [subtitle]="'Partido #' + m.id + ' • Programado: ' + (m.scheduledTime | date: 'dd/MM/yyyy HH:mm')"
+    [backLink]="'/events/' + eventId()"
+    backLabel="Volver al evento"
+  >
+    <app-status-badge [status]="m.status" />
+    <button type="button" class="rs-btn rs-btn-secondary" (click)="printSheet()">
+      Imprimir acta
+    </button>
+  </app-page-header>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <app-lineup-card
+      sideLabel="Local"
+      sideTone="emerald"
+      [clubName]="homeClubName()"
+      [lineup]="homeLineup()"
+      [closing]="homeLineup() !== null && closingId() === homeLineup()!.id"
+      (closeRequested)="closeLineup($event, homeClubName())"
+      (inspectPerson)="openDocuments($event)"
+    />
+
+    <app-lineup-card
+      sideLabel="Visitante"
+      sideTone="sky"
+      [clubName]="awayClubName()"
+      [lineup]="awayLineup()"
+      [closing]="awayLineup() !== null && closingId() === awayLineup()!.id"
+      (closeRequested)="closeLineup($event, awayClubName())"
+      (inspectPerson)="openDocuments($event)"
+    />
+  </div>
+
+  <app-document-viewer-modal
+    [person]="selectedPerson()"
+    [roleLabel]="selectedRoleLabel()"
+    (closed)="selectedPerson.set(null)"
+  />
+}

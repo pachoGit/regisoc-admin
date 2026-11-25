@@ -1,0 +1,218 @@
+@if (loading()) {
+  <app-loading-spinner label="Cargando plantilla del club..." />
+} @else if (club(); as c) {
+  <app-page-header
+    [title]="c.name"
+    [subtitle]="c.description || 'Revisión documental de la plantilla registrada por el gestor del club'"
+    backLink="/clubs"
+    backLabel="Volver a clubes"
+  >
+    <app-status-badge [status]="c.isActive ? 'ACTIVE' : 'INACTIVE'" />
+  </app-page-header>
+
+  <!-- Summary strip -->
+  <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="rs-card p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Jugadores</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{{ players().length }}</p>
+    </div>
+    <div class="rs-card p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Entrenadores</p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{{ coaches().length }}</p>
+    </div>
+    <div class="rs-card p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Preparadores Físicos
+      </p>
+      <p class="mt-1 text-2xl font-bold text-slate-900 tabular-nums">{{ trainers().length }}</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="rs-tabs mb-5">
+    <button
+      type="button"
+      class="rs-tab"
+      [class.rs-tab-active]="activeTab() === 'players'"
+      (click)="setTab('players')"
+    >
+      Jugadores ({{ players().length }})
+    </button>
+    <button
+      type="button"
+      class="rs-tab"
+      [class.rs-tab-active]="activeTab() === 'coaches'"
+      (click)="setTab('coaches')"
+    >
+      Entrenadores ({{ coaches().length }})
+    </button>
+    <button
+      type="button"
+      class="rs-tab"
+      [class.rs-tab-active]="activeTab() === 'trainers'"
+      (click)="setTab('trainers')"
+    >
+      Preparadores Físicos ({{ trainers().length }})
+    </button>
+  </div>
+
+  <!-- Players Table -->
+  @if (activeTab() === 'players') {
+    @if (players().length === 0) {
+      <app-empty-state
+        title="Sin jugadores registrados"
+        description="El gestor de este club aún no ha cargado jugadores desde la aplicación móvil."
+      />
+    } @else {
+      <div class="rs-table-wrapper">
+        <table class="rs-table">
+          <thead>
+            <tr>
+              <th>Deportista</th>
+              <th>Documento</th>
+              <th>Posición</th>
+              <th>Edad</th>
+              <th>Documentación</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (player of players(); track player.id) {
+              <tr>
+                <td class="font-semibold text-slate-900">
+                  {{ player.firstName }} {{ player.lastName }}
+                </td>
+                <td class="tabular-nums">{{ player.documentNumber }}</td>
+                <td>
+                  <app-status-badge [status]="player.position" />
+                </td>
+                <td class="tabular-nums">{{ player.age }} años</td>
+                <td>
+                  <app-status-badge
+                    [status]="hasCompleteDocuments(player) ? 'ACTIVE' : 'INACTIVE'"
+                    [customLabel]="hasCompleteDocuments(player) ? 'Completa' : 'Incompleta'"
+                  />
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-secondary rs-btn-sm"
+                    (click)="openDocuments(player, 'Jugador')"
+                  >
+                    Ver documentos
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Coaches Table -->
+  @if (activeTab() === 'coaches') {
+    @if (coaches().length === 0) {
+      <app-empty-state
+        title="Sin entrenadores registrados"
+        description="El gestor del club aún no ha cargado entrenadores."
+      />
+    } @else {
+      <div class="rs-table-wrapper">
+        <table class="rs-table">
+          <thead>
+            <tr>
+              <th>Entrenador</th>
+              <th>Documento</th>
+              <th>Edad</th>
+              <th>Documentación</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (coach of coaches(); track coach.id) {
+              <tr>
+                <td class="font-semibold text-slate-900">
+                  {{ coach.firstName }} {{ coach.lastName }}
+                </td>
+                <td class="tabular-nums">{{ coach.documentNumber }}</td>
+                <td class="tabular-nums">{{ coach.age }} años</td>
+                <td>
+                  <app-status-badge
+                    [status]="hasCompleteDocuments(coach) ? 'ACTIVE' : 'INACTIVE'"
+                    [customLabel]="hasCompleteDocuments(coach) ? 'Completa' : 'Incompleta'"
+                  />
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-secondary rs-btn-sm"
+                    (click)="openDocuments(coach, 'Entrenador')"
+                  >
+                    Ver documentos
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Physical Trainers Table -->
+  @if (activeTab() === 'trainers') {
+    @if (trainers().length === 0) {
+      <app-empty-state
+        title="Sin preparadores físicos registrados"
+        description="El gestor del club aún no ha cargado preparadores físicos."
+      />
+    } @else {
+      <div class="rs-table-wrapper">
+        <table class="rs-table">
+          <thead>
+            <tr>
+              <th>Preparador Físico</th>
+              <th>Documento</th>
+              <th>Edad</th>
+              <th>Documentación</th>
+              <th class="text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (trainer of trainers(); track trainer.id) {
+              <tr>
+                <td class="font-semibold text-slate-900">
+                  {{ trainer.firstName }} {{ trainer.lastName }}
+                </td>
+                <td class="tabular-nums">{{ trainer.documentNumber }}</td>
+                <td class="tabular-nums">{{ trainer.age }} años</td>
+                <td>
+                  <app-status-badge
+                    [status]="hasCompleteDocuments(trainer) ? 'ACTIVE' : 'INACTIVE'"
+                    [customLabel]="hasCompleteDocuments(trainer) ? 'Completa' : 'Incompleta'"
+                  />
+                </td>
+                <td class="text-right">
+                  <button
+                    type="button"
+                    class="rs-btn rs-btn-secondary rs-btn-sm"
+                    (click)="openDocuments(trainer, 'Preparador Físico')"
+                  >
+                    Ver documentos
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <app-document-viewer-modal
+    [person]="selectedPerson()"
+    [roleLabel]="selectedRoleLabel()"
+    (closed)="closeDocuments()"
+  />
+}
